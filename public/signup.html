@@ -80,7 +80,7 @@
 <body>
     <div class="container">
         <h1>MovieDB</h1>
-        <form id="signup-form" action="/signup" method="POST">
+        <form id="signup-form">
             <div class="input-box">
                 <input type="text" id="username" name="username" placeholder="Enter Username" required>
             </div>
@@ -90,6 +90,8 @@
         </form>
     </div>
 
+    <!-- Include the config.js file -->
+    <script src="config.js"></script>
     <script>
         document.getElementById('signup-form').addEventListener('submit', async function (event) {
             event.preventDefault(); // Prevent form from refreshing the page
@@ -102,7 +104,8 @@
             }
 
             try {
-                const response = await fetch('http://localhost:3000/signup', {
+                // Use the SERVER_URL from config.js
+                const response = await fetch(`${CONFIG.SERVER_URL}/signup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

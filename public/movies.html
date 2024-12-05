@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MovieDB - Search</title>
     <style>
+        /* Styles unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -62,6 +63,12 @@
         .search-box button:hover {
             opacity: 0.9;
         }
+
+        .result {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -73,10 +80,11 @@
                 <button type="submit">Search</button>
             </div>
         </form>
+        <div id="results" class="result"></div>
     </div>
 
     <script>
-        document.getElementById('search-form').addEventListener('submit', function(event) {
+        document.getElementById('search-form').addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent form from refreshing the page
 
             const movieName = document.getElementById('movie-name').value.trim();
@@ -86,8 +94,46 @@
                 return;
             }
 
-            // Simulate searching by displaying the entered movie name
-            alert(`Searching for: ${movieName}`);
+            try {
+                // Make a POST request to the backend
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ movieName }),
+                });
+
+                const data = await response.json();
+                const resultsDiv = document.getElementById('results');
+
+                if (response.ok) {
+                    if (data.movies && data.movies.length > 0) {
+                        // Display the results
+                        const movieList = data.movies
+                            .map(movie => `
+                                <div>
+                                    <strong>${movie.ImdbId}</strong>: ${movie.Description}
+                                    <br>Star Casts: ${movie.StarCasts}
+                                    <br>Director: ${movie.Director}
+                                    <br>Genre: ${movie.Genre}
+                                    <br>Release Year: ${movie.ReleaseYear}
+                                    <br>Ratings: ${movie.Ratings}/5.0
+                                </div>
+                                <hr>
+                            `)
+                            .join('');
+                        resultsDiv.innerHTML = movieList;
+                    } else {
+                        resultsDiv.textContent = 'No movies found.';
+                    }
+                } else {
+                    resultsDiv.textContent = data.message || 'Error fetching movies.';
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Failed to search for movies.');
+            }
         });
     </script>
 </body>

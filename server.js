@@ -6,17 +6,15 @@ const pool = require('./db');
 require('dotenv').config();
 const path = require('path');
 
-
-
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Middleware to parse request body
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-
+// Ensure the database table exists
 const initializeDb = async () => {
     const query = `
         CREATE TABLE IF NOT EXISTS users (
@@ -34,7 +32,14 @@ const initializeDb = async () => {
 
 initializeDb();
 
+// Redirect the root URL to login.html
+app.get("/", (req, res) => {
+    res.redirect("/login.html");
+});
+
+
 app.post("/signup", async (req, res) => {
+    //console.log("Request body:", req.body); 
     const { username } = req.body;
 
     if (!username) {
@@ -62,6 +67,7 @@ app.post("/signup", async (req, res) => {
     }
 });
 
+
 app.post("/login", async (req, res) => {
     const { username } = req.body;
 
@@ -87,7 +93,36 @@ app.post("/login", async (req, res) => {
     }
 });
 
+app.post('/search', async (req, res) => {
+    const { movieName } = req.body;
+
+    if (!movieName) {
+        return res.status(400).json({ message: 'Movie name is required.' });
+    }
+
+    try {
+        const query = `
+            SELECT *
+            FROM Movies
+            WHERE LOWER(Description) LIKE LOWER($1) OR LOWER(ImdbId) LIKE LOWER($1)
+        `;
+        const values = [`%${movieName}%`]; // Wildcard for partial matches
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No movies found.' });
+        }
+
+        res.status(200).json({ movies: result.rows });
+    } catch (err) {
+        console.error('Error searching movies:', err.message);
+        res.status(500).json({ message: 'Error searching for movies.' });
+    }
+});
+
+
 // Start the server
-app.listen(port, () => {
+app.listen(port,'0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
