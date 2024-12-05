@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieDB - Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            width: 300px;
+        }
+
+        .container h1 {
+            margin: 0 0 20px;
+            font-size: 2rem;
+            color: #333;
+        }
+
+        .search-box {
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .search-box button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            border: none;
+            background-color: #007BFF;
+            color: #fff;
+            font-size: 1rem;
+            padding: 0 15px;
+            cursor: pointer;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .search-box button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MovieDB</h1>
+        <form id="search-form">
+            <div class="search-box">
+                <input type="text" id="movie-name" name="movie-name" placeholder="Search Movie" required>
+                <button type="submit">Search</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent form from refreshing the page
+
+            const movieName = document.getElementById('movie-name').value.trim();
+
+            if (!movieName) {
+                alert("Please enter a movie name.");
+                return;
+            }
+
+            // Simulate searching by displaying the entered movie name
+            alert(`Searching for: ${movieName}`);
+        });
+    </script>
+</body>
+</html>
