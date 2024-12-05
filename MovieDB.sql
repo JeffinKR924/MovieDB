@@ -13,12 +13,12 @@ CREATE TABLE Movies (
 );
 
 CREATE TABLE Users (
-    uid SERIAL PRIMARY KEY,
+    UID SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE TABLE Reviews (
-    UID VARCHAR(32),
+    UID INTEGER,
     ImdbId VARCHAR(32),
     Contents VARCHAR(250),
     Ratings REAL NOT NULL,
