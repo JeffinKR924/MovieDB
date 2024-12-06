@@ -3,17 +3,17 @@
 
 CREATE TABLE Movies (
     ImdbId VARCHAR(32) PRIMARY KEY,
-    Description VARCHAR(250),
+    Description VARCHAR(4000),
     StarCasts VARCHAR(200) NOT NULL,
     Director VARCHAR(100) NOT NULL,
-    Genre VARCHAR(50) NOT NULL,
+    Genre VARCHAR(250) NOT NULL,
     ReleaseYear CHAR(4) NOT NULL,
     Ratings REAL NOT NULL,
     CHECK (Ratings >= 0.0 AND Ratings <= 5.0)
 );
 
 CREATE TABLE Users (
-    uid SERIAL PRIMARY KEY,
+    UID SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE
 );
 
