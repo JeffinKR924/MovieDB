@@ -18,7 +18,7 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE Reviews (
-    UID INTEGER,
+    UID SERIAL PRIMARY KEY,
     ImdbId VARCHAR(32),
     Contents VARCHAR(250),
     Ratings REAL NOT NULL,

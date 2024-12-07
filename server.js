@@ -93,6 +93,7 @@ app.post("/login", async (req, res) => {
     }
 });
 
+<<<<<<< HEAD
 app.post('/search', async (req, res) => {
     const { movieName } = req.body;
 
@@ -122,6 +123,21 @@ app.post('/search', async (req, res) => {
 });
 
 
+=======
+app.post("/review", (req, res) => {
+    if ((req.body.movieId !== undefined) && (req.body.review !== undefined) && (req.body.rating !== undefined))
+        {
+            pool.query("INSERT INTO reviews (imdbid, contents, ratings) VALUES ($1, $2, $3)", [req.body.movieId, req.body.review, req.body.rating]).then(result => {
+                res.statusCode = 200
+                res.send();
+            })
+        }
+        else {
+            res.status(400).send();
+        }
+});
+
+>>>>>>> 533a17715209322d01d3a07596224a7b91c92fd6
 // Start the server
 app.listen(port,'0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${port}`);
