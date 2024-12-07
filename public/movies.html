@@ -113,12 +113,13 @@
                         const movieList = data.movies
                             .map(movie => `
                                 <div>
-                                    <strong>${movie.ImdbId}</strong>: ${movie.Description}
-                                    <br>Star Casts: ${movie.StarCasts}
-                                    <br>Director: ${movie.Director}
-                                    <br>Genre: ${movie.Genre}
-                                    <br>Release Year: ${movie.ReleaseYear}
-                                    <br>Ratings: ${movie.Ratings}/5.0
+                                    <strong>Title:</strong> ${movie.name} (${movie.imdbid})
+                                    <br><strong>Description:</strong> ${movie.description || 'N/A'}
+                                    <br><strong>Star Casts:</strong> ${movie.starcasts || 'N/A'}
+                                    <br><strong>Director:</strong> ${movie.director || 'N/A'}
+                                    <br><strong>Genre:</strong> ${movie.genre || 'N/A'}
+                                    <br><strong>Release Year:</strong> ${movie.releaseyear || 'N/A'}
+                                    <br><strong>Ratings:</strong> ${movie.ratings || 'N/A'}/5.0
                                 </div>
                                 <hr>
                             `)

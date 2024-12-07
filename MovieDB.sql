@@ -3,6 +3,7 @@
 
 CREATE TABLE Movies (
     ImdbId VARCHAR(32) PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL, -- Added movie name
     Description VARCHAR(4000),
     StarCasts VARCHAR(200) NOT NULL,
     Director VARCHAR(100) NOT NULL,
@@ -18,7 +19,8 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE Reviews (
-    UID SERIAL PRIMARY KEY,
+    ReviewID SERIAL PRIMARY KEY, -- Renamed UID to ReviewID for clarity
+    UID INT NOT NULL, -- Changed type to INT to match Users table
     ImdbId VARCHAR(32),
     Contents VARCHAR(250),
     Ratings REAL NOT NULL,

@@ -1,5 +1,4 @@
 const axios = require('axios');
-const fs = require('fs');
 const pool = require('./db');
 require('dotenv').config();
 
@@ -39,15 +38,16 @@ async function fetchAndPopulateMovies() {
       });
 
       const credits = creditsResponse.data;
-      const cast = credits.cast.slice(0, 5).map(member => member.name).join(', '); // First 15 cast members
+      const cast = credits.cast.slice(0, 5).map(member => member.name).join(', '); // First 5 cast members
       const director = credits.crew.find(member => member.job === 'Director')?.name || 'Unknown';
 
       await pool.query(
-        `INSERT INTO Movies (ImdbId, Description, StarCasts, Director, Genre, ReleaseYear, Ratings)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO Movies (ImdbId, Name, Description, StarCasts, Director, Genre, ReleaseYear, Ratings)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT DO NOTHING`,
         [
           id.toString(), 
+          title || 'Unknown Title', // Added title for Name column
           overview || 'No description available', 
           cast || 'No star casts available', 
           director, 
