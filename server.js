@@ -119,7 +119,7 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// Search our DB for presaved movies
+// Search our DB for presaved movie
 app.post('/search', async (req, res) => {
     const { movieName } = req.body;
   

@@ -11,7 +11,7 @@
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Align at the top for scrollable content */
+            align-items: flex-start; 
             height: 100vh;
             background-color: #f5f5f5;
         }
@@ -24,7 +24,7 @@
             padding: 20px;
             width: 90%;
             max-width: 500px;
-            margin-top: 20px; /* Adds space from the top */
+            margin-top: 20px; 
         }
 
         .container h1 {
@@ -66,9 +66,9 @@
         }
 
         .results-container {
-            max-height: 400px; /* Limit the height of the results */
-            overflow-y: auto; /* Add vertical scrolling for long results */
-            text-align: left; /* Align text for better readability */
+            max-height: 400px; 
+            overflow-y: auto; 
+            text-align: left; 
             margin-top: 20px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -103,7 +103,7 @@
 
     <script>
         document.getElementById('search-form').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent form from refreshing the page
+            event.preventDefault(); 
 
             const movieName = document.getElementById('movie-name').value.trim();
 
@@ -113,7 +113,6 @@
             }
 
             try {
-                // Make a POST request to the backend
                 const response = await fetch('/search', {
                     method: 'POST',
                     headers: {
@@ -127,7 +126,6 @@
 
                 if (response.ok) {
                     if (data.movies && data.movies.length > 0) {
-                        // Display the results
                         const movieList = data.movies
                             .map(movie => `
                                 <div class="result">
