@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MovieDB - Search</title>
     <style>
-        /* Styles unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* Align at the top for scrollable content */
             height: 100vh;
             background-color: #f5f5f5;
         }
@@ -22,8 +21,10 @@
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            width: 300px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 20px; /* Adds space from the top */
         }
 
         .container h1 {
@@ -64,10 +65,27 @@
             opacity: 0.9;
         }
 
-        .result {
+        .results-container {
+            max-height: 400px; /* Limit the height of the results */
+            overflow-y: auto; /* Add vertical scrolling for long results */
+            text-align: left; /* Align text for better readability */
             margin-top: 20px;
-            font-size: 1rem;
-            color: #555;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .result {
+            margin-bottom: 10px;
+        }
+
+        .result strong {
+            color: #333;
+        }
+
+        .result hr {
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -80,7 +98,7 @@
                 <button type="submit">Search</button>
             </div>
         </form>
-        <div id="results" class="result"></div>
+        <div id="results" class="results-container"></div>
     </div>
 
     <script>
@@ -112,7 +130,7 @@
                         // Display the results
                         const movieList = data.movies
                             .map(movie => `
-                                <div>
+                                <div class="result">
                                     <strong>Title:</strong> ${movie.name} (${movie.imdbid})
                                     <br><strong>Description:</strong> ${movie.description || 'N/A'}
                                     <br><strong>Star Casts:</strong> ${movie.starcasts || 'N/A'}
