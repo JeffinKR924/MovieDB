@@ -5,6 +5,8 @@ const fs = require('fs');
 const pool = require('./db');
 require('dotenv').config();
 const path = require('path');
+const { searchAndPopulateMovie } = require('./searchForNewMovie');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -117,40 +119,85 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// Search for Movies
+// Search our DB for presaved movie
 app.post('/search', async (req, res) => {
     const { movieName } = req.body;
-
-
+  
     if (!movieName) {
-        console.error("Search error: Movie name is missing.");
-        return res.status(400).json({ message: 'Movie name is required.' });
+      console.error("Search error: Movie name is missing.");
+      return res.status(400).json({ message: 'Movie name is required.' });
     }
-
+  
     try {
-        const query = `
-            SELECT *
-            FROM Movies
-            WHERE LOWER(Name) LIKE LOWER($1)
-               OR LOWER(Description) LIKE LOWER($1)
-               OR LOWER(Genre) LIKE LOWER($1)
-        `;
-        const values = [`%${movieName}%`];
-
-        const result = await pool.query(query, values);
-
-
-        if (result.rows.length === 0) {
-            console.log("No movies found for the search term:", movieName);
-            return res.status(404).json({ message: 'No movies found.' });
-        }
-
-        res.status(200).json({ movies: result.rows });
+      const query = `
+        SELECT *
+        FROM Movies
+        WHERE LOWER(Name) LIKE LOWER($1)
+      `;
+      const values = [`%${movieName}%`];
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rows.length > 0) {
+        console.log("Movies found in the local database:", result.rows);
+        return res.status(200).json({ movies: result.rows });
+      }
+  
+      console.log(`Movie "${movieName}" not found locally. Searching TMDB...`);
+  
+      const baseURL = process.env.SERVER_BASE_URL || `http://localhost:${port}`;
+      const tmdbResponse = await axios.post(`${baseURL}/searchNewMovies`, { movieName });
+      const tmdbMovie = tmdbResponse.data.movies[0];
+  
+      if (!tmdbMovie) {
+        console.log(`No movie found in TMDB for "${movieName}".`);
+        return res.status(404).json({ message: 'No movies found.' });
+      }
+  
+      console.log(`Movie "${tmdbMovie.title}" added to the database. Rechecking local database...`);
+  
+      const strictQuery = `
+        SELECT *
+        FROM Movies
+        WHERE ImdbId = $1
+      `;
+      const exactValues = [tmdbMovie.id.toString()];
+  
+      const newResult = await pool.query(strictQuery, exactValues);
+  
+      if (newResult.rows.length > 0) {
+        return res.status(200).json({ movies: newResult.rows });
+      }
+  
+      console.error("Movie added to the database but could not be retrieved.");
+      return res.status(500).json({ message: 'Error retrieving movie after adding it to the database.' });
+  
     } catch (err) {
-        console.error('Error searching movies:', err.message); // Log any errors
-        res.status(500).json({ message: 'Error searching for movies.' });
+      console.error('Error during search:', err.message);
+      res.status(500).json({ message: 'Error searching for movies.' });
     }
+});  
+  
+// Search TMDB for a movie
+app.post('/searchNewMovies', async (req, res) => {
+  const { movieName } = req.body;
+
+  if (!movieName) {
+    console.error("Search error: Movie name is missing.");
+    return res.status(400).json({ message: 'Movie name is required.' });
+  }
+
+  const movie = await searchAndPopulateMovie(movieName);
+
+  console.log(movie);
+
+  if (!movie) {
+    return res.status(404).json({ message: 'No movies found in TMDB.' });
+  }
+
+  return res.status(200).json({ movies: [movie] });
 });
+
 
 // Add a Movie Review
 app.post("/review", async (req, res) => {
@@ -175,6 +222,6 @@ app.post("/review", async (req, res) => {
 });
 
 // Start the server
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, '::', () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
