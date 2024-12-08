@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieDB - Search</title>
+    <title>MovieDB - Browse Movies</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,7 +11,7 @@
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start; 
+            align-items: flex-start;
             height: 100vh;
             background-color: #f5f5f5;
         }
@@ -23,8 +23,8 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
             width: 90%;
-            max-width: 500px;
-            margin-top: 20px; 
+            max-width: 800px;
+            margin-top: 20px;
         }
 
         .container h1 {
@@ -66,9 +66,9 @@
         }
 
         .results-container {
-            max-height: 400px; 
-            overflow-y: auto; 
-            text-align: left; 
+            max-height: 600px;
+            overflow-y: auto;
+            text-align: left;
             margin-top: 20px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -77,15 +77,76 @@
         }
 
         .result {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .result:hover {
+            background-color: #f1f1f1;
         }
 
         .result strong {
             color: #333;
+            font-size: 1.2rem;
         }
 
-        .result hr {
-            margin: 10px 0;
+        .result .details {
+            margin-top: 10px;
+            font-size: 1rem;
+            color: #555;
+        }
+
+        .review-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .review-modal .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .review-modal input,
+        .review-modal textarea {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .review-modal button {
+            padding: 10px 15px;
+            font-size: 1rem;
+            border: none;
+            background-color: #007BFF;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .review-modal button:hover {
+            opacity: 0.9;
+        }
+
+        .close-modal {
+            background-color: #f44336;
         }
     </style>
 </head>
@@ -94,17 +155,27 @@
         <h1>MovieDB</h1>
         <form id="search-form">
             <div class="search-box">
-                <input type="text" id="movie-name" name="movie-name" placeholder="Search Movie" required>
+                <input type="text" id="movie-name" name="movie-name" placeholder="Search for movies" required>
                 <button type="submit">Search</button>
             </div>
         </form>
         <div id="results" class="results-container"></div>
     </div>
 
+    <div id="review-modal" class="review-modal">
+        <div class="modal-content">
+            <h3>Submit a Review</h3>
+            <input type="text" id="review-movie-id" readonly>
+            <textarea id="review-content" placeholder="Write your review..." rows="4"></textarea>
+            <input type="number" id="review-rating" placeholder="Rating (0-5)" min="0" max="5" step="0.1">
+            <button id="submit-review">Submit</button>
+            <button class="close-modal" onclick="toggleModal()">Close</button>
+        </div>
+    </div>
+
     <script>
         document.getElementById('search-form').addEventListener('submit', async function(event) {
-            event.preventDefault(); 
-
+            event.preventDefault();
             const movieName = document.getElementById('movie-name').value.trim();
 
             if (!movieName) {
@@ -115,9 +186,7 @@
             try {
                 const response = await fetch('/search', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ movieName }),
                 });
 
@@ -125,33 +194,75 @@
                 const resultsDiv = document.getElementById('results');
 
                 if (response.ok) {
-                    if (data.movies && data.movies.length > 0) {
-                        const movieList = data.movies
-                            .map(movie => `
-                                <div class="result">
-                                    <strong>Title:</strong> ${movie.name} (${movie.imdbid})
-                                    <br><strong>Description:</strong> ${movie.description || 'N/A'}
-                                    <br><strong>Star Casts:</strong> ${movie.starcasts || 'N/A'}
-                                    <br><strong>Director:</strong> ${movie.director || 'N/A'}
-                                    <br><strong>Genre:</strong> ${movie.genre || 'N/A'}
-                                    <br><strong>Release Year:</strong> ${movie.releaseyear || 'N/A'}
-                                    <br><strong>Ratings:</strong> ${movie.ratings || 'N/A'}/5.0
+                    resultsDiv.innerHTML = data.movies
+                        .map(movie => `
+                            <div class="result" onclick="openReviewModal('${movie.imdbid}', '${movie.name}')">
+                                <strong>${movie.name}</strong> (${movie.releaseyear || 'N/A'})
+                                <div class="details">
+                                    <p><strong>Genre:</strong> ${movie.genre || 'N/A'}</p>
+                                    <p><strong>Director:</strong> ${movie.director || 'N/A'}</p>
+                                    <p><strong>Cast:</strong> ${movie.starcasts || 'N/A'}</p>
+                                    <p><strong>Rating:</strong> ${movie.ratings || 'N/A'}</p>
+                                    <p><strong>Description:</strong> ${movie.description || 'No description available.'}</p>
                                 </div>
                                 <hr>
-                            `)
-                            .join('');
-                        resultsDiv.innerHTML = movieList;
-                    } else {
-                        resultsDiv.textContent = 'No movies found.';
-                    }
+                            </div>
+                        `).join('');
                 } else {
-                    resultsDiv.textContent = data.message || 'Error fetching movies.';
+                    resultsDiv.textContent = data.message || "No movies found.";
                 }
             } catch (err) {
-                console.error('Error:', err);
-                alert('Failed to search for movies.');
+                console.error("Error searching movies:", err);
+                alert("Error searching movies.");
             }
         });
+
+        function openReviewModal(movieId, movieName) {
+            document.getElementById('review-movie-id').value = `${movieName} (${movieId})`;
+            toggleModal();
+        }
+
+        async function submitReview() {
+            const uid = localStorage.getItem('UID');  // Retrieve UID from localStorage
+            if (!uid) {
+                alert("You must be logged in to submit a review.");
+                return;
+            }
+
+            const movieId = document.getElementById('review-movie-id').value.split("(").pop().replace(")", "").trim();
+            const review = document.getElementById('review-content').value.trim();
+            const rating = parseFloat(document.getElementById('review-rating').value.trim());
+
+            if (!review || isNaN(rating) || rating < 0 || rating > 5) {
+                alert("Please provide a valid review and rating (0-5).");
+                return;
+            }
+
+            try {
+                const response = await fetch('/review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid, movieId, review, rating }),  // Send the UID with the review
+                });
+
+                if (response.ok) {
+                    alert("Review submitted successfully!");
+                    toggleModal();
+                } else {
+                    alert("Failed to submit review.");
+                }
+            } catch (err) {
+                console.error("Error submitting review:", err);
+                alert("Error submitting review.");
+            }
+        }
+
+        function toggleModal() {
+            const modal = document.getElementById('review-modal');
+            modal.style.display = modal.style.display === "flex" ? "none" : "flex";
+        }
+
+        document.getElementById('submit-review').addEventListener('click', submitReview);
     </script>
 </body>
 </html>

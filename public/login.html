@@ -96,14 +96,14 @@
     <script>
         document.getElementById('login-form').addEventListener('submit', async function (event) {
             event.preventDefault(); // Prevent form from refreshing the page
-
+    
             const username = document.getElementById('username').value;
-
+    
             if (!username) {
                 alert("Username is required!");
                 return;
             }
-
+    
             try {
                 const response = await fetch(`${CONFIG.SERVER_URL}/login`, {
                     method: 'POST',
@@ -112,17 +112,29 @@
                     },
                     body: JSON.stringify({ username }),
                 });
-
+    
                 if (response.ok) {
-                    const message = await response.text();
-                    alert(message); // Show success message
-                    window.location.href = "movies.html";
+                    const data = await response.json(); // Expect UID in the response
+    
+                    console.log("Login successful. Response data:", data); // Debug message
+    
+                    // Check if UID is present in the response
+                    if (data && data.uid) {
+                        console.log("UID received:", data.uid); // Debug message
+                        localStorage.setItem('UID', data.uid); // Store UID in localStorage
+                        alert(`Welcome back, ${username}, ${data.uid}!`);
+                        window.location.href = "movies.html";
+                    } else {
+                        console.error("No UID found in the response."); // Debug message for missing UID
+                        alert("Error: UID not found in response.");
+                    }
                 } else {
                     const error = await response.text();
+                    console.error("Login failed:", error); // Debug message for failed login
                     alert(`Error: ${error}`); // Show error message
                 }
             } catch (err) {
-                console.error("Error logging in:", err);
+                console.error("Error logging in:", err); // Debug message for network or other errors
                 alert("Failed to log in. Please try again.");
             }
         });

@@ -7,11 +7,10 @@ require('dotenv').config();
 const path = require('path');
 const { searchAndPopulateMovie } = require('./searchForNewMovie');
 
-
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware to parse request body
+// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -89,12 +88,16 @@ app.post("/signup", async (req, res) => {
         const insertResult = await pool.query(insertQuery, [username]);
 
         const newUserId = insertResult.rows[0].uid;
-        res.status(201).send(`User created with UID: ${newUserId}`);
+        res.status(201).json({
+            message: "User created successfully!",
+            uid: newUserId
+        }); // Return the UID in the response
     } catch (err) {
         console.error("Error inserting user:", err.message);
         res.status(500).send("Failed to add user.");
     }
 });
+
 
 // User Login
 app.post("/login", async (req, res) => {
@@ -112,111 +115,88 @@ app.post("/login", async (req, res) => {
             return res.status(404).send("User not found. Please create an account.");
         }
 
-        res.status(200).send(`Welcome back, ${username}!`);
+        const uid = result.rows[0].uid; // Extract UID from the query result
+        res.status(200).json({ message: `Welcome back, ${username}!`, uid }); // Return UID in response
     } catch (err) {
         console.error("Error checking user:", err.message);
         res.status(500).send("Failed to check user.");
     }
 });
 
-// Search our DB for presaved movie
+// Search movies in the database or TMDB
 app.post('/search', async (req, res) => {
     const { movieName } = req.body;
-  
+
     if (!movieName) {
-      console.error("Search error: Movie name is missing.");
-      return res.status(400).json({ message: 'Movie name is required.' });
+        return res.status(400).json({ message: 'Movie name is required.' });
     }
-  
+
     try {
-      const query = `
-        SELECT *
-        FROM Movies
-        WHERE LOWER(Name) LIKE LOWER($1)
-      `;
-      const values = [`%${movieName}%`];
-  
-      const result = await pool.query(query, values);
-  
-      if (result.rows.length > 0) {
-        console.log("Movies found in the local database:", result.rows);
-        return res.status(200).json({ movies: result.rows });
-      }
-  
-      console.log(`Movie "${movieName}" not found locally. Searching TMDB...`);
-  
-      const baseURL = process.env.SERVER_BASE_URL || `http://localhost:${port}`;
-      const tmdbResponse = await axios.post(`${baseURL}/searchNewMovies`, { movieName });
-      const tmdbMovie = tmdbResponse.data.movies[0];
-  
-      if (!tmdbMovie) {
-        console.log(`No movie found in TMDB for "${movieName}".`);
-        return res.status(404).json({ message: 'No movies found.' });
-      }
-  
-      console.log(`Movie "${tmdbMovie.title}" added to the database. Rechecking local database...`);
-  
-      const strictQuery = `
-        SELECT *
-        FROM Movies
-        WHERE ImdbId = $1
-      `;
-      const exactValues = [tmdbMovie.id.toString()];
-  
-      const newResult = await pool.query(strictQuery, exactValues);
-  
-      if (newResult.rows.length > 0) {
-        return res.status(200).json({ movies: newResult.rows });
-      }
-  
-      console.error("Movie added to the database but could not be retrieved.");
-      return res.status(500).json({ message: 'Error retrieving movie after adding it to the database.' });
-  
+        const query = `
+            SELECT *
+            FROM Movies
+            WHERE LOWER(Name) LIKE LOWER($1)
+        `;
+        const values = [`%${movieName}%`];
+        const result = await pool.query(query, values);
+
+        if (result.rows.length > 0) {
+            return res.status(200).json({ movies: result.rows });
+        }
+
+        console.log(`Movie "${movieName}" not found locally. Searching TMDB...`);
+        const movie = await searchAndPopulateMovie(movieName);
+
+        if (!movie) {
+            return res.status(404).json({ message: 'No movies found.' });
+        }
+
+        const updatedResult = await pool.query(
+            `SELECT * FROM Movies WHERE ImdbId = $1`,
+            [movie.id.toString()]
+        );
+
+        if (updatedResult.rows.length > 0) {
+            return res.status(200).json({ movies: updatedResult.rows });
+        }
+
+        return res.status(500).json({ message: 'Error retrieving movie after adding it to the database.' });
     } catch (err) {
-      console.error('Error during search:', err.message);
-      res.status(500).json({ message: 'Error searching for movies.' });
+        console.error('Error during search:', err.message);
+        res.status(500).json({ message: 'Error searching for movies.' });
     }
-});  
-  
-// Search TMDB for a movie
-app.post('/searchNewMovies', async (req, res) => {
-  const { movieName } = req.body;
-
-  if (!movieName) {
-    console.error("Search error: Movie name is missing.");
-    return res.status(400).json({ message: 'Movie name is required.' });
-  }
-
-  const movie = await searchAndPopulateMovie(movieName);
-
-  console.log(movie);
-
-  if (!movie) {
-    return res.status(404).json({ message: 'No movies found in TMDB.' });
-  }
-
-  return res.status(200).json({ movies: [movie] });
 });
-
 
 // Add a Movie Review
 app.post("/review", async (req, res) => {
     const { uid, movieId, review, rating } = req.body;
 
+    // Debugging logs to track received data
+    console.log("Received data:", { uid, movieId, review, rating });
+
     if (!uid || !movieId || !review || rating === undefined) {
+        console.error("Missing required fields: UID, movieId, review, rating.");
         return res.status(400).send("All fields (UID, movieId, review, rating) are required.");
     }
 
     try {
+        // Debugging log to check query being executed
         const query = `
             INSERT INTO Reviews (UID, ImdbId, Contents, Ratings)
             VALUES ($1, $2, $3, $4)
         `;
+        console.log("Executing query:", query);
+        console.log("Query parameters:", [uid, movieId, review, rating]);
+
+        // Execute the query
         await pool.query(query, [uid, movieId, review, rating]);
 
+        console.log("Review added successfully.");
         res.status(200).send("Review added successfully.");
     } catch (err) {
         console.error("Error adding review:", err.message);
+        // Additional error details for debugging
+        console.error("Error details:", err);
         res.status(500).send("Failed to add review.");
     }
 });

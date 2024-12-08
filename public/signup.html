@@ -114,8 +114,9 @@
                 });
 
                 if (response.ok) {
-                    const message = await response.text();
-                    alert(message); // Show success message
+                    const data = await response.json(); // Expect UID in the response
+                    localStorage.setItem('UID', data.uid); // Store UID in localStorage
+                    alert(`Account created successfully for ${username}!`);
                     window.location.href = "movies.html";
                 } else {
                     const error = await response.text();
