@@ -38,7 +38,7 @@
             position: relative;
         }
 
-        .search-box input {
+        .search-box input, .search-box select {
             width: 100%;
             padding: 10px;
             font-size: 1rem;
@@ -99,55 +99,6 @@
             font-size: 1rem;
             color: #555;
         }
-
-        .review-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .review-modal .modal-content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
-        }
-
-        .review-modal input,
-        .review-modal textarea {
-            width: 100%;
-            margin-bottom: 15px;
-            padding: 10px;
-            font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        .review-modal button {
-            padding: 10px 15px;
-            font-size: 1rem;
-            border: none;
-            background-color: #007BFF;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .review-modal button:hover {
-            opacity: 0.9;
-        }
-
-        .close-modal {
-            background-color: #f44336;
-        }
     </style>
 </head>
 <body>
@@ -155,48 +106,74 @@
         <h1>MovieDB</h1>
         <form id="search-form">
             <div class="search-box">
-                <input type="text" id="movie-name" name="movie-name" placeholder="Search for movies" required>
+                <input type="text" id="movie-name" name="movie-name" placeholder="Search for movies by name">
+                <select id="genre-select" name="genre">
+                    <option value="">Select Genre</option>
+                    <option value="Action">Action</option>
+                    <option value="Adventure">Adventure</option>
+                    <option value="Animation">Animation</option>
+                    <option value="Comedy">Comedy</option>
+                    <option value="Crime">Crime</option>
+                    <option value="Documentary">Documentary</option>
+                    <option value="Drama">Drama</option>
+                    <option value="Family">Family</option>
+                    <option value="Fantasy">Fantasy</option>
+                    <option value="History">History</option>
+                    <option value="Horror">Horror</option>
+                    <option value="Music">Music</option>
+                    <option value="Mystery">Mystery</option>
+                    <option value="Romance">Romance</option>
+                    <option value="Science Fiction">Science Fiction</option>
+                    <option value="TV Movie">TV Movie</option>
+                    <option value="Thriller">Thriller</option>
+                    <option value="War">War</option>
+                    <option value="Western">Western</option>
+                </select>
+                <input type="text" id="director" name="director" placeholder="Search by Director">
+                <input type="number" id="release-year" name="release-year" placeholder="Search by Release Year" min="1900" max="2100">
                 <button type="submit">Search</button>
             </div>
         </form>
         <div id="results" class="results-container"></div>
     </div>
 
-    <div id="review-modal" class="review-modal">
-        <div class="modal-content">
-            <h3>Submit a Review</h3>
-            <input type="text" id="review-movie-id" readonly>
-            <textarea id="review-content" placeholder="Write your review..." rows="4"></textarea>
-            <input type="number" id="review-rating" placeholder="Rating (0-5)" min="0" max="5" step="0.1">
-            <button id="submit-review">Submit</button>
-            <button class="close-modal" onclick="toggleModal()">Close</button>
-        </div>
-    </div>
-
     <script>
         document.getElementById('search-form').addEventListener('submit', async function(event) {
             event.preventDefault();
-            const movieName = document.getElementById('movie-name').value.trim();
 
-            if (!movieName) {
-                alert("Please enter a movie name.");
+            const movieName = document.getElementById('movie-name').value.trim();
+            const genre = document.getElementById('genre-select').value;
+            const director = document.getElementById('director').value.trim();
+            const releaseYear = document.getElementById('release-year').value.trim();
+
+            // Ensure at least one parameter is filled out before submitting
+            if (!movieName && !genre && !director && !releaseYear) {
+                alert("Please enter at least one search parameter.");
                 return;
             }
+
+            // Prepare search parameters to send
+            const searchParams = {};
+            if (movieName) searchParams.movieName = movieName;
+            if (genre) searchParams.genre = genre;
+            if (director) searchParams.director = director;
+            if (releaseYear) searchParams.releaseYear = releaseYear;
 
             try {
                 const response = await fetch('/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ movieName }),
+                    body: JSON.stringify(searchParams),
                 });
 
                 const data = await response.json();
                 const resultsDiv = document.getElementById('results');
 
                 if (response.ok) {
+                    // Display search results
                     resultsDiv.innerHTML = data.movies
                         .map(movie => `
-                            <div class="result" onclick="openReviewModal('${movie.imdbid}', '${movie.name}')">
+                            <div class="result" onclick="openReviewPage('${movie.imdbid}')">
                                 <strong>${movie.name}</strong> (${movie.releaseyear || 'N/A'})
                                 <div class="details">
                                     <p><strong>Genre:</strong> ${movie.genre || 'N/A'}</p>
@@ -217,52 +194,10 @@
             }
         });
 
-        function openReviewModal(movieId, movieName) {
-            document.getElementById('review-movie-id').value = `${movieName} (${movieId})`;
-            toggleModal();
+        function openReviewPage(movieId) {
+            localStorage.setItem('movieId', movieId);  // Store the movieId in localStorage
+            window.location.href = 'review.html';  // Navigate to the review page
         }
-
-        async function submitReview() {
-            const uid = localStorage.getItem('UID');  // Retrieve UID from localStorage
-            if (!uid) {
-                alert("You must be logged in to submit a review.");
-                return;
-            }
-
-            const movieId = document.getElementById('review-movie-id').value.split("(").pop().replace(")", "").trim();
-            const review = document.getElementById('review-content').value.trim();
-            const rating = parseFloat(document.getElementById('review-rating').value.trim());
-
-            if (!review || isNaN(rating) || rating < 0 || rating > 5) {
-                alert("Please provide a valid review and rating (0-5).");
-                return;
-            }
-
-            try {
-                const response = await fetch('/review', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uid, movieId, review, rating }),  // Send the UID with the review
-                });
-
-                if (response.ok) {
-                    alert("Review submitted successfully!");
-                    toggleModal();
-                } else {
-                    alert("Failed to submit review.");
-                }
-            } catch (err) {
-                console.error("Error submitting review:", err);
-                alert("Error submitting review.");
-            }
-        }
-
-        function toggleModal() {
-            const modal = document.getElementById('review-modal');
-            modal.style.display = modal.style.display === "flex" ? "none" : "flex";
-        }
-
-        document.getElementById('submit-review').addEventListener('click', submitReview);
     </script>
 </body>
 </html>

@@ -125,47 +125,73 @@ app.post("/login", async (req, res) => {
 
 // Search movies in the database or TMDB
 app.post('/search', async (req, res) => {
-    const { movieName } = req.body;
+    const { movieName, genre, director, releaseYear } = req.body;
+    let query = 'SELECT * FROM Movies WHERE';
+    let values = [];
+    let conditions = [];
 
-    if (!movieName) {
-        return res.status(400).json({ message: 'Movie name is required.' });
+    // Build dynamic query based on provided search parameters
+    if (movieName) {
+        conditions.push('LOWER(Name) LIKE LOWER($' + (values.length + 1) + ')');
+        values.push(`%${movieName}%`);
     }
 
+    if (genre) {
+        conditions.push('LOWER(Genre) ILIKE LOWER($' + (values.length + 1) + ')');
+        values.push(`%${genre}%`);
+    }
+
+    if (director) {
+        conditions.push('LOWER(Director) LIKE LOWER($' + (values.length + 1) + ')');
+        values.push(`%${director}%`);
+    }
+
+    if (releaseYear) {
+        conditions.push('ReleaseYear = $' + (values.length + 1));
+        values.push(releaseYear);
+    }
+
+    if (conditions.length === 0) {
+        return res.status(400).json({ message: 'Please provide at least one search parameter.' });
+    }
+
+    query += ' ' + conditions.join(' AND ');
+
     try {
-        const query = `
-            SELECT *
-            FROM Movies
-            WHERE LOWER(Name) LIKE LOWER($1)
-        `;
-        const values = [`%${movieName}%`];
         const result = await pool.query(query, values);
 
         if (result.rows.length > 0) {
             return res.status(200).json({ movies: result.rows });
         }
 
-        console.log(`Movie "${movieName}" not found locally. Searching TMDB...`);
-        const movie = await searchAndPopulateMovie(movieName);
+        // If no results, only call searchAndPopulateMovie for movie name search
+        if (movieName) {
+            console.log(`Movie "${movieName}" not found locally. Searching TMDB...`);
+            const movie = await searchAndPopulateMovie(movieName);
 
-        if (!movie) {
-            return res.status(404).json({ message: 'No movies found.' });
+            if (!movie) {
+                return res.status(404).json({ message: 'No movies found.' });
+            }
+
+            const updatedResult = await pool.query(
+                `SELECT * FROM Movies WHERE ImdbId = $1`,
+                [movie.id.toString()]
+            );
+
+            if (updatedResult.rows.length > 0) {
+                return res.status(200).json({ movies: updatedResult.rows });
+            }
+
+            return res.status(500).json({ message: 'Error retrieving movie after adding it to the database.' });
         }
 
-        const updatedResult = await pool.query(
-            `SELECT * FROM Movies WHERE ImdbId = $1`,
-            [movie.id.toString()]
-        );
-
-        if (updatedResult.rows.length > 0) {
-            return res.status(200).json({ movies: updatedResult.rows });
-        }
-
-        return res.status(500).json({ message: 'Error retrieving movie after adding it to the database.' });
+        return res.status(404).json({ message: 'No movies found for the given criteria.' });
     } catch (err) {
         console.error('Error during search:', err.message);
         res.status(500).json({ message: 'Error searching for movies.' });
     }
 });
+
 
 // Add a Movie Review
 app.post("/review", async (req, res) => {
@@ -201,6 +227,44 @@ app.post("/review", async (req, res) => {
     }
 });
 
+app.get('/reviews/:movieId', async (req, res) => {
+    const movieId = req.params.movieId;
+
+    console.log(`Received request for reviews with movieId: ${movieId}`); // Debugging log
+
+    const query = `
+        SELECT r.ReviewID, r.UID, r.ImdbId, r.Contents, r.Ratings,
+               u.username, m.Name AS movie_name
+        FROM Reviews r
+        JOIN Users u ON r.UID = u.UID
+        JOIN Movies m ON r.ImdbId = m.ImdbId
+        WHERE r.ImdbId = $1
+    `;
+
+    try {
+        const result = await pool.query(query, [movieId]);
+
+        console.log('Query result:', result.rows); // Debugging log for the result
+
+        if (result.rows.length > 0) {
+            const reviews = result.rows.map(row => ({
+                reviewId: row.ReviewID,
+                username: row.username, // User's name
+                movieName: row.movie_name, // Movie name
+                contents: row.contents,
+                rating: row.ratings
+            }));
+
+            res.json({ reviews });
+        } else {
+            console.log(`No reviews found for movieId: ${movieId}`); // Debugging log for empty result
+            res.status(404).json({ message: 'No reviews found for this movie' });
+        }
+    } catch (err) {
+        console.error('Error fetching reviews:', err.message); // Debugging log for errors
+        res.status(500).json({ message: 'Error fetching reviews' });
+    }
+});
 // Start the server
 app.listen(port, '::', () => {
     console.log(`Server is running on http://localhost:${port}`);
